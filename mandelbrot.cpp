@@ -25,6 +25,7 @@ public:
 	void shift(int);
 	void zoom(int);
 	void resol(int);
+	void toggle_cursor();
 	void debug();
 
 private:
@@ -36,6 +37,7 @@ private:
 	vector< vector<int> > data;
 	SDL_Renderer*renderer;
 	bool updateNeeded;
+	bool cursor;
 	int compute_number(complex<float>);
 	void min_max(int&,int&);
 	int map_color(int,int,int);
@@ -45,6 +47,7 @@ Mandelbrot::Mandelbrot(int h, int v){
 	h_res = h;
 	v_res = v;
 	iterations = 30;
+	cursor = false;
 
 	// Create window
 	SDL_Window* window = SDL_CreateWindow
@@ -132,6 +135,14 @@ void Mandelbrot::render(){
 		}
 	}
 
+	// Draw cursor
+	if(cursor){
+		int size = 6;
+		SDL_SetRenderDrawColor(renderer,0,0xff,0,0);
+		SDL_RenderDrawLine(renderer,h_res/2,v_res/2-size,h_res/2,v_res/2+size);
+		SDL_RenderDrawLine(renderer,h_res/2-size,v_res/2,h_res/2+size,v_res/2);
+	}
+
 	// Render frame
 	SDL_RenderPresent(renderer);
 	updateNeeded = false;
@@ -175,6 +186,8 @@ void Mandelbrot::shift(int direction){
 
 void Mandelbrot::zoom(int direction){
 	float dx = abs(left_center.real() - center.real()) / h_res;
+	bool zoom_max = (dx == 0)?true:false;
+
 	complex<float> c;
 	switch(direction){
 		case UP:{
@@ -182,12 +195,15 @@ void Mandelbrot::zoom(int direction){
 			break;
 		}
 		case DOWN:{
+			if(zoom_max)return;
 			c = {5*dx,0};
 			break;
 		}
 	}
-	left_center += c;
-	updateNeeded = true;
+	if(center.real() - left_center.real() + c.real() > 0){
+		left_center += c;
+		updateNeeded = true;
+	}
 }
 
 void Mandelbrot::resol(int direction){
@@ -203,6 +219,11 @@ void Mandelbrot::resol(int direction){
 		}
 	}
 	updateNeeded = true;	
+}
+
+void Mandelbrot::toggle_cursor(){
+	cursor = !cursor;
+	updateNeeded = true;
 }
 
 void Mandelbrot::debug(){
@@ -236,6 +257,8 @@ void loop(Mandelbrot&mandel){
 						// Resolution
 						case 'x':{mandel.resol(UP);break;}
 						case 'y':{mandel.resol(DOWN);break;}
+						// Cursor
+						case 'c':{mandel.toggle_cursor();break;}
 						default:{
 							break;
 						}
