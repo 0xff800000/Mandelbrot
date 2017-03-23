@@ -8,17 +8,24 @@
 
 #include <iostream>
 #include <vector>
+#include <complex>
+#include <algorithm>
 #include <SDL2/SDL.h>
-//#include <conio.h>
 
 using namespace std;
 
 //######################### Class Mandelbrot ##########################
+enum eDirections { UP,DOWN,LEFT,RIGHT };
 
 class Mandelbrot{
 public:
 	Mandelbrot(int,int);
 	void render();
+	void set_center(float,float);
+	void shift(int);
+	void zoom(int);
+	void resol(int);
+	void debug();
 
 private:
 	int h_res;
@@ -26,23 +33,26 @@ private:
 	int iterations;
 	complex<float> center;
 	complex<float> left_center;
-	vector<vector<int>> data;
+	vector< vector<int> > data;
 	SDL_Renderer*renderer;
+	bool updateNeeded;
 	int compute_number(complex<float>);
-}
+	void min_max(int&,int&);
+	int map_color(int,int,int);
+};
 
 Mandelbrot::Mandelbrot(int h, int v){
 	h_res = h;
 	v_res = v;
-	iterations = 50;
+	iterations = 30;
 
 	// Create window
 	SDL_Window* window = SDL_CreateWindow
 	(
 		"Mandelbrot set", SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
-		width,
-		height,
+		v_res,
+		h_res,
 		SDL_WINDOW_SHOWN
 	);
     renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
@@ -63,96 +73,146 @@ Mandelbrot::Mandelbrot(int h, int v){
 
     // Init complex
     center = {0,0};
-    left_center = {-1,0};
+    left_center = {-2,0};
+    updateNeeded = true;
+}
 
+void Mandelbrot::min_max(int&min,int&max){
+	int mins = iterations,maxs = 0;
+	for(int y=0; y<v_res; y++){
+		for(int x=0; x<h_res; x++){
+			if(data[y][x]>max)max = data[y][x];
+			if(data[y][x]<min)min = data[y][x];
+		}
+	}
+	min = mins;
+	max = maxs;
+}
+
+int Mandelbrot::map_color(int val, int min, int max){
+	return (int)(val * 255) / (iterations); // Absolute
+	//return (max > 0)?((val-min)*255) / (max-min):0; // Relative
+
+	//return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 int Mandelbrot::compute_number(complex<float> c){
 	complex<float> z (0,0);
 	for(int i=0; i<iterations; i++){
-		if(z.abs() > 2) return i;
+		if(abs(z) >= 2) return i;
 		z = z*z + c;
 	}
 	return iterations;
 }
 
 void Mandelbrot::render(){
+	if(!updateNeeded) return;
 	// Get upper left corner coordinate
-	float dx = abs(left_center.real() - center.real()) / h_res;
-//TBD	float dy = abs();
+	float dx = abs(left_center.real() - center.real()) / h_res * 2;
+	float dy = dx;
+	complex<float> up_left (left_center.real(),left_center.imag()+(v_res/2)*dy);
 
 	// Compute the image
 	for(int y=0; y<v_res; y++){
 		for(int x=0; x<h_res; x++){
-			
-		}
-	}
-}
-
-void drawWorld(SDL_Renderer*renderer,GameOfLife&ant,int w,int h){
-	for(int y=0;y<ant.Height;y++){
-		for(int x=0;x<ant.Width;x++){
-			if(ant.getWorld(x,y)){
-				SDL_SetRenderDrawColor(renderer,255,255,255,255);
-			}
-			else{
-				SDL_SetRenderDrawColor(renderer,0,0,0,0);
-			}
-			SDL_Rect rect;
-			rect.x=x*w/ant.Width;
-			rect.y=y*h/ant.Height;
-			rect.w=w/ant.Width;
-			rect.h=h/ant.Height;
-			SDL_RenderFillRect(renderer,&rect);
+			complex<float> pt;
+			pt = {up_left.real() + x*dx, up_left.imag() - y*dy};
+			data[y][x] = compute_number(pt);
 		}
 	}
 
+	// Render SDL monochrome image
+	int min,max;
+	min_max(min,max);
+	for(int y=0; y<v_res; y++){
+		for(int x=0; x<h_res; x++){
+			int color = map_color(data[y][x], min, max);
+			SDL_SetRenderDrawColor(renderer,color,color,color,color);
+			SDL_RenderDrawPoint(renderer,x,y);
+		}
+	}
 	SDL_RenderPresent(renderer);
+	updateNeeded = false;
+	debug();
 }
 
-void modifyWorld(SDL_Renderer*renderer,GameOfLife&ant,int w,int h,int mouseX,int mouseY,bool state){
-	ant.setWorld(mouseX*ant.Width/w,mouseY*ant.Height/h,state);
-	//cout<<"Mouse:"<<mouseX*ant.Width/w<<","<<mouseY*ant.Height/h<<endl;
-	if(state){
-		SDL_SetRenderDrawColor(renderer,255,255,255,255);
-	}
-	else{
-		SDL_SetRenderDrawColor(renderer,0,0,0,0);
-	}
-	SDL_Rect rect;
-	rect.x=(mouseX*ant.Width/w)*w/ant.Width;
-	rect.y=(mouseY*ant.Height/h)*h/ant.Height;
-	/*
-	rect.x=mouseX*w/ant.Width;
-	rect.y=mouseY*h/ant.Height;
-	*/
-	rect.w=w/ant.Width;
-	rect.h=h/ant.Height;
-
-	SDL_RenderFillRect(renderer,&rect);
-
-	SDL_RenderPresent(renderer);
+void Mandelbrot::set_center(float x, float y){
+	float dx = center.real() - left_center.real();
+	center = {x,y};
+	left_center = center;
+	left_center -= dx;
 }
 
-void loop(SDL_Renderer*renderer,int w,int h,int gridW,int gridH){
-	GameOfLife ant(gridW,gridH);
+void Mandelbrot::shift(int direction){
+	float dx = abs(left_center.real() - center.real()) / h_res;
+	complex<float> c;
+	switch(direction){
+		case UP:{
+			c = {0,-dx};
+			break;
+		}
+		case DOWN:{
+			c = {0,dx};
+			break;
+		}
+		case LEFT:{
+			c = {-dx,0};
+			break;
+		}
+		case RIGHT:{
+			c = {dx,0};
+			break;
+		}
+	}
+	// Update new center
+	center += c;
+	left_center += c;
+	updateNeeded = true;
+}
+
+void Mandelbrot::zoom(int direction){
+	float dx = abs(left_center.real() - center.real()) / h_res;
+	complex<float> c;
+	switch(direction){
+		case UP:{
+			c = {-5*dx,0};
+			break;
+		}
+		case DOWN:{
+			c = {5*dx,0};
+			break;
+		}
+	}
+	left_center += c;
+	updateNeeded = true;
+}
+
+void Mandelbrot::resol(int direction){
+	switch(direction){
+		case UP:{
+			iterations += 10;
+			break;
+		}
+		case DOWN:{
+			iterations -= 10;
+			break;
+		}
+	}
+	updateNeeded = true;	
+}
+
+void Mandelbrot::debug(){
+	cout << "Center:" << center << endl;
+	cout << "Left:" << left_center << endl;
+	cout << "Iterations:" << iterations << endl;
+	cout << "*******" << endl;
+}
+
+//######################### Class Mandelbrot ##########################
+
+void loop(Mandelbrot&mandel){
 	SDL_Event ev;
-	bool autoStep=false;
-	bool clicked=false;
-	bool state=false;
-	int delayVal=0;
-	int timer=0;
     for(;;){
-
-    	if(delayVal<0)delayVal=0;
-
-    	if(autoStep&&(timer++>=delayVal)){
-    		timer=0;
-    		ant.step();
-    		drawWorld(renderer,ant,w,h);
-    		//SDL_Delay(delayVal);
-    	}
-
     	while(SDL_PollEvent(&ev)){
     		switch(ev.type){
 				case SDL_QUIT:{
@@ -161,77 +221,36 @@ void loop(SDL_Renderer*renderer,int w,int h,int gridW,int gridH){
 				case SDL_KEYDOWN:{
 					switch(ev.key.keysym.sym){
 						case SDLK_ESCAPE: return;
-						//Camera rotation
-						case 'q':return;
-						case 'w':{autoStep=!autoStep;break;}
-						case 'e':{autoStep=false;ant.step();drawWorld(renderer,ant,w,h);break;}
-						case 'a':{delayVal=(delayVal-500000<0)?0:delayVal-500000;break;}
-						case 's':{delayVal+=500000;break;}
-						case 'x':{autoStep=false;ant.killAll();drawWorld(renderer,ant,w,h);break;}
+						// Zoom
+						case 'q':{mandel.zoom(UP);break;}
+						case 'e':{mandel.zoom(DOWN);break;}
+						// Movement
+						case 'w':{mandel.shift(DOWN);break;}
+						case 's':{mandel.shift(UP);break;}
+						case 'a':{mandel.shift(LEFT);break;}
+						case 'd':{mandel.shift(RIGHT);break;}
+						// Resolution
+						case 'x':{mandel.resol(UP);break;}
+						case 'y':{mandel.resol(DOWN);break;}
 						default:{
 							break;
 						}
 					}
 					break;
 				}
-				case SDL_MOUSEBUTTONDOWN:{
-					state=(ev.button.button==SDL_BUTTON_LEFT);
-					int mouseX=ev.button.x;
-					int mouseY=ev.button.y;
-					modifyWorld(renderer,ant,w,h,(int)mouseX,(int)mouseY,state);
-					clicked=true;
-					break;
-				}
-				case SDL_MOUSEBUTTONUP:{
-					state=(ev.button.button==SDL_BUTTON_LEFT);
-					clicked=false;
-					break;
-				}
-				case SDL_MOUSEMOTION:{
-					if(clicked){
-						int mouseX=ev.motion.x;
-						int mouseY=ev.motion.y;
-						modifyWorld(renderer,ant,w,h,(int)mouseX,(int)mouseY,state);
-					}
-					break;
-				}
 				default: break;
     		}
     	}
+		mandel.render();
+    	SDL_Delay(10);
     }
 }
 
 int main(int argc, char** argv) {
-	//freopen("CON", "w", stdout);
-	// Window
-	const int width=500,height=500;
-	
+    int Width=500,Height=500;
+    Mandelbrot mandel(Width,Height);
+    loop(mandel);
 
-    //Black screen
-    SDL_SetRenderDrawColor(renderer,0,0,0,0);
-    SDL_RenderClear(renderer);
-    SDL_RenderPresent(renderer);
-    SDL_SetRenderDrawColor(renderer,255,255,255,255);
-
-    int Width=100,Height=100;
-    if(argc == 3){
-    	Width = atoi(argv[1]);
-    	Height = atoi(argv[2]);
-    }
-    else if(argc == 2){
-    	Width = Height = atoi(argv[1]);
-    }
-    // cout<<"###### Game of Life ######"<<endl;
-    // cout<<"Controls: q:quit, w:start/stop, e:step, x:kill all\na:slow down, s:speed up, mouse left:set, mouse right:reset"<<endl;
-    // cout<<"Enter width (max:500):";cin>>Width;
-    // cout<<"Enter height (max:500):";cin>>Height;
-
-    if(Width>500)Width=500;
-    if(Height>500)Height=500;
-
-    loop(renderer,width,height,Width,Height);
-
-    SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;
 }
