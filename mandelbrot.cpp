@@ -55,7 +55,7 @@ Mandelbrot::Mandelbrot(int h, int v){
 		h_res,
 		SDL_WINDOW_SHOWN
 	);
-    renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
+    renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
 
     // Black screen
     SDL_SetRenderDrawColor(renderer,0,0,0,0);
@@ -121,7 +121,7 @@ void Mandelbrot::render(){
 		}
 	}
 
-	// Render SDL monochrome image
+	// Draw SDL monochrome image
 	int min,max;
 	min_max(min,max);
 	for(int y=0; y<v_res; y++){
@@ -131,6 +131,8 @@ void Mandelbrot::render(){
 			SDL_RenderDrawPoint(renderer,x,y);
 		}
 	}
+
+	// Render frame
 	SDL_RenderPresent(renderer);
 	updateNeeded = false;
 	debug();
@@ -141,10 +143,11 @@ void Mandelbrot::set_center(float x, float y){
 	center = {x,y};
 	left_center = center;
 	left_center -= dx;
+	updateNeeded = true;
 }
 
 void Mandelbrot::shift(int direction){
-	float dx = abs(left_center.real() - center.real()) / h_res;
+	float dx = 5*abs(left_center.real() - center.real()) / h_res;
 	complex<float> c;
 	switch(direction){
 		case UP:{
@@ -195,6 +198,7 @@ void Mandelbrot::resol(int direction){
 		}
 		case DOWN:{
 			iterations -= 10;
+			if(iterations <= 0) iterations = 1;
 			break;
 		}
 	}
