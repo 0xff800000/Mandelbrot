@@ -99,6 +99,38 @@ int Mandelbrot::map_color(int val, int min, int max){
 	//return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+int Mandelbrot::sweep_color(int val){
+	// Remap from 0..iterations to 0..6*ff
+	val = (int)(val/iterations * 6 * 0xff);
+	int r = 0,g = 0,b = 0;
+
+	// 0..ff,0,0
+	if(val < 0xff){
+		r = val;
+	}
+	// ff,0..ff,0
+	else if(val < 2*0xff){
+		r = 0xff;
+		g = val - 0xff;
+	}
+	// ff..0,ff,0
+	else if(val < 3*0xff){
+		
+	}
+	// 0,ff,0..ff
+	else if(val < 4*0xff){
+		
+	}
+	// 0,ff..0,ff
+	else if(val < 5*0xff){
+		
+	}
+	// 0,0,ff..0
+	else(val < 6*0xff){
+		
+	}
+}
+
 int Mandelbrot::compute_number(complex<float> c){
 	complex<float> z (0,0);
 	for(int i=0; i<iterations; i++){
@@ -214,7 +246,7 @@ void Mandelbrot::resol(int direction){
 		}
 		case DOWN:{
 			iterations -= 10;
-			if(iterations <= 0) iterations = 1;
+			if(iterations <= 10) iterations = 10;
 			break;
 		}
 	}
