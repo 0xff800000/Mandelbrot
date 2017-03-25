@@ -16,6 +16,7 @@ using namespace std;
 
 //######################### Class Mandelbrot ##########################
 enum eDirections { UP,DOWN,LEFT,RIGHT };
+enum eColorMode { MONOCHROME, COLOR};
 
 class Mandelbrot{
 public:
@@ -27,6 +28,7 @@ public:
 	void resol(int);
 	void toggle_cursor();
 	void debug();
+	void cycle_color();
 
 private:
 	int h_res;
@@ -38,9 +40,11 @@ private:
 	SDL_Renderer*renderer;
 	bool updateNeeded;
 	bool cursor;
+	int color_mode;
 	int compute_number(complex<float>);
 	void min_max(int&,int&);
 	int map_color(int,int,int);
+	int sweep_color(int,int&,int&,int&b);
 };
 
 Mandelbrot::Mandelbrot(int h, int v){
@@ -48,6 +52,7 @@ Mandelbrot::Mandelbrot(int h, int v){
 	v_res = v;
 	iterations = 30;
 	cursor = false;
+	color_mode = MONOCHROME;
 
 	// Create window
 	SDL_Window* window = SDL_CreateWindow
@@ -99,10 +104,10 @@ int Mandelbrot::map_color(int val, int min, int max){
 	//return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-int Mandelbrot::sweep_color(int val){
+int Mandelbrot::sweep_color(int val, int&r,int&g, int&b){
 	// Remap from 0..iterations to 0..6*ff
-	val = (int)(val/iterations * 6 * 0xff);
-	int r = 0,g = 0,b = 0;
+	//val = (int)(val/iterations) * 6 * 0xff;
+	r = 0;g = 0;b = 0;
 
 	// 0..ff,0,0
 	if(val < 0xff){
@@ -115,19 +120,22 @@ int Mandelbrot::sweep_color(int val){
 	}
 	// ff..0,ff,0
 	else if(val < 3*0xff){
-		
+		r = 0xff - (val - 3*0xff);
+		g = 0xff;
 	}
 	// 0,ff,0..ff
 	else if(val < 4*0xff){
-		
+		g = 0xff;
+		b = val - 4 * 0xff;
 	}
 	// 0,ff..0,ff
 	else if(val < 5*0xff){
-		
+		g = 0xff - (val - 5*0xff);
+		b = 0xff;
 	}
 	// 0,0,ff..0
-	else(val < 6*0xff){
-		
+	else if(val < 6*0xff){
+		b = 0xff - (val - 6*0xff);
 	}
 }
 
@@ -162,7 +170,14 @@ void Mandelbrot::render(){
 	for(int y=0; y<v_res; y++){
 		for(int x=0; x<h_res; x++){
 			int color = map_color(data[y][x], min, max);
-			SDL_SetRenderDrawColor(renderer,color,color,color,color);
+			if(color_mode == MONOCHROME){
+				SDL_SetRenderDrawColor(renderer,color,color,color,color);
+			}
+			else if(color_mode == COLOR){
+				int r,g,b;
+				sweep_color(data[y][x],r,g,b);
+				SDL_SetRenderDrawColor(renderer,r,g,b,0);
+			}
 			SDL_RenderDrawPoint(renderer,x,y);
 		}
 	}
@@ -258,6 +273,16 @@ void Mandelbrot::toggle_cursor(){
 	updateNeeded = true;
 }
 
+void Mandelbrot::cycle_color(){
+	if(color_mode == MONOCHROME){
+		color_mode = COLOR;
+	}
+	else{
+		color_mode = MONOCHROME;
+	}
+	updateNeeded = true;
+}
+
 void Mandelbrot::debug(){
 	cout << "Center:" << center << endl;
 	cout << "Left:" << left_center << endl;
@@ -291,6 +316,8 @@ void loop(Mandelbrot&mandel){
 						case 'y':{mandel.resol(DOWN);break;}
 						// Cursor
 						case 'c':{mandel.toggle_cursor();break;}
+						// Color mode
+						case 'v':{mandel.cycle_color();break;}
 						default:{
 							break;
 						}
