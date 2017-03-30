@@ -24,6 +24,7 @@ public:
 	void render();
 	void set_center(float,float);
 	void shift(int);
+	void c_move(int);
 	void zoom(int);
 	void resol(int);
 	void toggle_cursor();
@@ -36,6 +37,7 @@ private:
 	int iterations;
 	complex<float> center;
 	complex<float> left_center;
+	complex<float> start_number;
 	vector< vector<int> > data;
 	SDL_Renderer*renderer;
 	bool updateNeeded;
@@ -45,6 +47,7 @@ private:
 	void min_max(int&,int&);
 	int map_color(int,int,int);
 	int sweep_color(int,int&,int&,int&b);
+
 };
 
 Mandelbrot::Mandelbrot(int h, int v){
@@ -82,6 +85,7 @@ Mandelbrot::Mandelbrot(int h, int v){
     // Init complex
     center = {0,0};
     left_center = {-2,0};
+    start_number = {0,0};
     updateNeeded = true;
 }
 
@@ -134,13 +138,13 @@ int Mandelbrot::sweep_color(int val, int&r,int&g, int&b){
 		b = 0xff;
 	}
 	// 0,0,ff..0
-	else if(val < 6*0xff){
+	else{
 		b = 0xff - (val - 6*0xff);
 	}
 }
 
 int Mandelbrot::compute_number(complex<float> c){
-	complex<float> z (0,0);
+	complex<float> z = start_number;
 	for(int i=0; i<iterations; i++){
 		if(abs(z) >= 2) return i;
 		z = z*z + c;
@@ -231,6 +235,32 @@ void Mandelbrot::shift(int direction){
 	updateNeeded = true;
 }
 
+void Mandelbrot::c_move(int direction){
+	float dx = 5*abs(left_center.real() - center.real()) / h_res;
+	complex<float> c;
+	switch(direction){
+		case UP:{
+			c = {0,-dx};
+			break;
+		}
+		case DOWN:{
+			c = {0,dx};
+			break;
+		}
+		case LEFT:{
+			c = {-dx,0};
+			break;
+		}
+		case RIGHT:{
+			c = {dx,0};
+			break;
+		}
+	}
+	// Update new complex number
+	start_number += c;
+	updateNeeded = true;
+}
+
 void Mandelbrot::zoom(int direction){
 	float dx = abs(left_center.real() - center.real()) / h_res;
 	bool zoom_max = (dx == 0)?true:false;
@@ -286,6 +316,7 @@ void Mandelbrot::cycle_color(){
 void Mandelbrot::debug(){
 	cout << "Center:" << center << endl;
 	cout << "Left:" << left_center << endl;
+	cout << "number:" << start_number << endl;
 	cout << "Iterations:" << iterations << endl;
 	cout << "*******" << endl;
 }
@@ -316,6 +347,11 @@ void loop(Mandelbrot&mandel){
 						case 'y':{mandel.resol(DOWN);break;}
 						// Cursor
 						case 'c':{mandel.toggle_cursor();break;}
+						// Change complex number
+						case 'k':{mandel.c_move(DOWN);break;}
+						case 'i':{mandel.c_move(UP);break;}
+						case 'j':{mandel.c_move(LEFT);break;}
+						case 'l':{mandel.c_move(RIGHT);break;}
 						// Color mode
 						case 'v':{mandel.cycle_color();break;}
 						default:{
