@@ -3,7 +3,7 @@
 // Author      : D01000100
 // Version     :
 // Copyright   : Your copyright notice
-// Description : Hello World in C++, Ansi-style
+// Description : Representation of mandelbrot & julia set
 //============================================================================
 
 #include <iostream>
@@ -17,6 +17,7 @@ using namespace std;
 //######################### Class Mandelbrot ##########################
 enum eDirections { UP,DOWN,LEFT,RIGHT };
 enum eColorMode { MONOCHROME, COLOR};
+enum eMode { MANDELBROT, JULIA};
 
 class Mandelbrot{
 public:
@@ -30,6 +31,7 @@ public:
 	void toggle_cursor();
 	void debug();
 	void cycle_color();
+	void change_mode();
 
 private:
 	int h_res;
@@ -43,6 +45,7 @@ private:
 	bool updateNeeded;
 	bool cursor;
 	int color_mode;
+	int mode;
 	int compute_number(complex<float>);
 	void min_max(int&,int&);
 	int map_color(int,int,int);
@@ -56,6 +59,7 @@ Mandelbrot::Mandelbrot(int h, int v){
 	iterations = 30;
 	cursor = false;
 	color_mode = MONOCHROME;
+	mode = MANDELBROT;
 
 	// Create window
 	SDL_Window* window = SDL_CreateWindow
@@ -145,6 +149,11 @@ int Mandelbrot::sweep_color(int val, int&r,int&g, int&b){
 
 int Mandelbrot::compute_number(complex<float> c){
 	complex<float> z = start_number;
+	if(mode == JULIA){
+		complex<float> tmp = c;
+		c = z;
+		z = tmp;
+	}
 	for(int i=0; i<iterations; i++){
 		if(abs(z) >= 2) return i;
 		z = z*z + c;
@@ -313,6 +322,16 @@ void Mandelbrot::cycle_color(){
 	updateNeeded = true;
 }
 
+void Mandelbrot::change_mode(){
+	if(mode == MANDELBROT){
+		mode = JULIA;
+	}
+	else{
+		mode = MANDELBROT;
+	}
+	updateNeeded = true;
+}
+
 void Mandelbrot::debug(){
 	cout << "Center:" << center << endl;
 	cout << "Left:" << left_center << endl;
@@ -354,6 +373,8 @@ void loop(Mandelbrot&mandel){
 						case 'l':{mandel.c_move(RIGHT);break;}
 						// Color mode
 						case 'v':{mandel.cycle_color();break;}
+						// Change mode
+						case 'm':{mandel.change_mode();break;}
 						default:{
 							break;
 						}
