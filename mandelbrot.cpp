@@ -23,7 +23,7 @@ class Mandelbrot{
 public:
 	Mandelbrot(int,int);
 	void render();
-	void set_center(float,float);
+	void set_center(int,int);
 	void shift(int);
 	void c_move(int);
 	void zoom(int);
@@ -37,6 +37,8 @@ private:
 	int h_res;
 	int v_res;
 	int iterations;
+	float zoom_stat;
+	float max_zoom;
 	complex<float> center;
 	complex<float> left_center;
 	complex<float> start_number;
@@ -49,7 +51,7 @@ private:
 	int compute_number(complex<float>);
 	void min_max(int&,int&);
 	int map_color(int,int,int);
-	int sweep_color(int,int&,int&,int&b);
+	void sweep_color(int,int&,int&,int&b);
 
 };
 
@@ -91,6 +93,10 @@ Mandelbrot::Mandelbrot(int h, int v){
     left_center = {-2,0};
     start_number = {0,0};
     updateNeeded = true;
+
+    // Zoom values
+    zoom_stat = 1/(center.real() - left_center.real());
+    max_zoom = 278339;
 }
 
 void Mandelbrot::min_max(int&min,int&max){
@@ -112,38 +118,34 @@ int Mandelbrot::map_color(int val, int min, int max){
 	//return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-int Mandelbrot::sweep_color(int val, int&r,int&g, int&b){
-	// Remap from 0..iterations to 0..6*ff
-	//val = (int)(val/iterations) * 6 * 0xff;
+void Mandelbrot::sweep_color(int val, int&r,int&g, int&b){
 	r = 0;g = 0;b = 0;
+	if(val == iterations)return;
+	int iter_scale = iterations / 4;
 
-	// 0..ff,0,0
-	if(val < 0xff){
-		r = val;
-	}
 	// ff,0..ff,0
-	else if(val < 2*0xff){
+	if(val <= iter_scale){
 		r = 0xff;
-		g = val - 0xff;
+		g = 0xff * val/iterations;
 	}
 	// ff..0,ff,0
-	else if(val < 3*0xff){
-		r = 0xff - (val - 3*0xff);
+	else if(val <= 2*iter_scale){
+		r = 0xff * (1 - val/iterations);
 		g = 0xff;
 	}
 	// 0,ff,0..ff
-	else if(val < 4*0xff){
+	else if(val <= 3*iter_scale){
 		g = 0xff;
-		b = val - 4 * 0xff;
+		b = 0xff * val/iterations;
 	}
 	// 0,ff..0,ff
-	else if(val < 5*0xff){
-		g = 0xff - (val - 5*0xff);
+	else if(val <= 4*iter_scale){
+		g = 0xff * (1 - val/iterations);
 		b = 0xff;
 	}
 	// 0,0,ff..0
 	else{
-		b = 0xff - (val - 6*0xff);
+		b = 0xff * (1 - val/iterations);
 	}
 }
 
@@ -209,11 +211,19 @@ void Mandelbrot::render(){
 	debug();
 }
 
-void Mandelbrot::set_center(float x, float y){
-	float dx = center.real() - left_center.real();
-	center = {x,y};
-	left_center = center;
-	left_center -= dx;
+void Mandelbrot::set_center(int x, int y){
+	// Get upper left corner
+	float dx = abs(left_center.real() - center.real()) / h_res * 2;
+	float dy = dx;
+	complex<float> up_left (left_center.real(),left_center.imag()+(v_res/2)*dy);
+	// Keep difference
+	float diff = center.real() - left_center.real();
+	// Set new center
+	complex<float> click = {-dx*x,dy*y};
+	click = up_left - click;
+	cout << "Click at :" << click << endl;
+	center = click;
+	left_center = center - diff;
 	updateNeeded = true;
 }
 
@@ -272,7 +282,7 @@ void Mandelbrot::c_move(int direction){
 
 void Mandelbrot::zoom(int direction){
 	float dx = abs(left_center.real() - center.real()) / h_res;
-	bool zoom_max = (dx == 0)?true:false;
+	bool zoom_max = (zoom_stat >= max_zoom)?true:false;
 
 	complex<float> c;
 	switch(direction){
@@ -286,10 +296,9 @@ void Mandelbrot::zoom(int direction){
 			break;
 		}
 	}
-	if(center.real() - left_center.real() + c.real() > 0){
-		left_center += c;
-		updateNeeded = true;
-	}
+	left_center += c;
+	zoom_stat = 1/(center.real() - left_center.real());
+	updateNeeded = true;
 }
 
 void Mandelbrot::resol(int direction){
@@ -333,9 +342,10 @@ void Mandelbrot::change_mode(){
 }
 
 void Mandelbrot::debug(){
-	cout << "Center:" << center << endl;
+	cout << "Center:" << center << " ; val:" << data[v_res/2][h_res/2] << endl;
 	cout << "Left:" << left_center << endl;
-	cout << "number:" << start_number << endl;
+	cout << "Zoom status:" << zoom_stat << endl;
+	cout << "Complex number:" << start_number << endl;
 	cout << "Iterations:" << iterations << endl;
 	cout << "*******" << endl;
 }
@@ -380,6 +390,10 @@ void loop(Mandelbrot&mandel){
 						}
 					}
 					break;
+				case SDL_MOUSEBUTTONDOWN:{
+					cout << "Click detected at :" << ev.button.x << "," << ev.button.y << endl;
+					mandel.set_center(ev.button.x,ev.button.y);
+				}
 				}
 				default: break;
     		}
