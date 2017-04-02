@@ -253,7 +253,7 @@ def loop(mandel):
 		#ygame.time.delay(10)
 
 def main():
-	witdth, height = (500,500)
+	witdth, height = (150,150)
 	mandel = Mandelbrot(witdth,height)
 	loop(mandel)
 

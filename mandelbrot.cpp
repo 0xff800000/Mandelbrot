@@ -55,7 +55,7 @@ private:
 
 };
 
-Mandelbrot::Mandelbrot(int h, int v){
+Mandelbrot::Mandelbrot(int v, int h){
 	h_res = h;
 	v_res = v;
 	iterations = 30;
@@ -68,8 +68,8 @@ Mandelbrot::Mandelbrot(int h, int v){
 	(
 		"Mandelbrot set", SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
-		v_res,
 		h_res,
+		v_res,
 		SDL_WINDOW_SHOWN
 	);
     renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
@@ -404,7 +404,7 @@ void loop(Mandelbrot&mandel){
 }
 
 int main(int argc, char** argv) {
-    int Width=500,Height=500;
+    int Width=400,Height=400;
     Mandelbrot mandel(Width,Height);
     loop(mandel);
 
