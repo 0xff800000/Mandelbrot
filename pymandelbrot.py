@@ -1,4 +1,4 @@
-import sys, math, pygame
+import sys, math, pygame, struct
 
 class Mandelbrot:
 	def __init__(self, h, v):
@@ -85,7 +85,9 @@ class Mandelbrot:
 		return self.iterations
 
 	def render(self):
-		if not self.updateNeeded: return
+		if not self.updateNeeded:
+			pygame.time.delay(100)
+			return
 		# Get upper left corner coordinate
 		dx = abs(self.left_center.real - self.center.real) / self.h_res * 2
 		dy = dx
@@ -122,6 +124,38 @@ class Mandelbrot:
 		pygame.display.flip()
 		self.updateNeeded = False
 		self.debug()
+
+	def writeImg(self):
+		bytesPerPix = 4
+		width = self.h_res
+		height = self.v_res
+		f=open("test.bmp",'wb')
+		f.write("BM")
+		f.write(struct.pack("<i",width*height*bytesPerPix)) #file size
+		f.write(bytearray(4)) #file
+		f.write(struct.pack("<i",54)) #pixels offset
+		f.write(struct.pack("<i",40)) #Header size
+		f.write(struct.pack("<i",width)) #width
+		f.write(struct.pack("<i",height)) #height
+		f.write(struct.pack("<h",1)) # 1
+		f.write(struct.pack("<h",8*bytesPerPix)) #bit per pixel
+		f.write(struct.pack("<i",0)) #compression
+		f.write(struct.pack("<i",0)) #image size
+		f.write('\x00'*4) #prefer resol x pix/m
+		f.write('\x00'*4) #prefer resol y pix/m
+		f.write('\x00'*4) #color used
+		f.write('\x00'*4) #color significant
+
+		for y in range(self.v_res):
+			for x in range(self.h_res):
+				r,g,b,a = self.screen.get_at((x,self.v_res-y-1))
+				# a = self.screen.get_at((x,y))
+				f.write(struct.pack("<B",r))
+				f.write(struct.pack("<B",g))
+				f.write(struct.pack("<B",b))
+				f.write(struct.pack("<B",a))
+				#print(a)
+		f.close()
 
 	def set_center(self,pos):
 		x,y = pos
@@ -249,8 +283,8 @@ def loop(mandel):
 		# Resolution
 		if key[pygame.K_x]: mandel.resol("UP")
 		if key[pygame.K_y]: mandel.resol("DOWN")
+		if key[pygame.K_p]: mandel.writeImg()
 		mandel.render()
-		#ygame.time.delay(10)
 
 def main():
 	witdth, height = (150,150)
