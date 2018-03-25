@@ -1,4 +1,17 @@
 import sys, math, pygame
+from multiprocessing import Pool
+
+def compute_number_thread(c):
+	x,y,cent,start_number,mode,iterations = c
+	z = start_number
+	if mode == "JULIA":
+		tmp = cent
+		cent = z
+		z = tmp
+	for i in range(iterations):
+		if abs(z) >= 2: return i
+		z = z*z + cent
+	return (x,y,iterations)
 
 class Mandelbrot:
 	def __init__(self, h, v):
@@ -84,6 +97,7 @@ class Mandelbrot:
 			z = z*z + c
 		return self.iterations
 
+
 	def render(self):
 		if not self.updateNeeded: return
 		# Get upper left corner coordinate
@@ -92,10 +106,17 @@ class Mandelbrot:
 		up_left = self.left_center.real + (self.left_center.imag+(self.v_res/2)*dy)*1j
 
 		# Compute the image
+		pts = []
+		p = Pool(5)
 		for y in range(self.v_res):
 			for x in range(self.h_res):
-				pt = (up_left.real + x*dx) + (up_left.imag - y*dy)*1j
-				self.data[y][x] = self.compute_number(pt)
+				pts.append((x,y, (up_left.real + x*dx) + (up_left.imag - y*dy)*1j,self.start_number,self.mode,self.iterations))
+		p.map(compute_number_thread, pts)
+		for pt in pts:
+			x = pt[0]
+			y = pt[1]
+			val = pt[3]
+			self.data[y][x] = val
 
 		# Draw SDL monochrome image
 		min_d,max_d = self.min_max()
