@@ -1,4 +1,4 @@
-import sys, math, pygame
+import sys, math, pygame, time
 from multiprocessing import Pool
 
 def compute_number_thread(c):
@@ -9,7 +9,7 @@ def compute_number_thread(c):
 		cent = z
 		z = tmp
 	for i in range(iterations):
-		if abs(z) >= 2: return i
+		if abs(z) >= 2: return (x,y,i)
 		z = z*z + cent
 	return (x,y,iterations)
 
@@ -107,16 +107,19 @@ class Mandelbrot:
 
 		# Compute the image
 		pts = []
-		p = Pool(5)
+		p = Pool(10)
 		for y in range(self.v_res):
 			for x in range(self.h_res):
-				pts.append((x,y, (up_left.real + x*dx) + (up_left.imag - y*dy)*1j,self.start_number,self.mode,self.iterations))
-		p.map(compute_number_thread, pts)
-		for pt in pts:
-			x = pt[0]
-			y = pt[1]
-			val = pt[3]
-			self.data[y][x] = val
+				nb = (up_left.real + x*dx) + (up_left.imag - y*dy)*1j
+				pts.append((x,y, nb,self.start_number,self.mode,self.iterations))
+		res = p.map(compute_number_thread, pts)
+		p.close()
+		for pt in res:
+			if(len(pt) == 3):
+				x = pt[0]
+				y = pt[1]
+				val = pt[2]
+				self.data[y][x] = val
 
 		# Draw SDL monochrome image
 		min_d,max_d = self.min_max()
@@ -254,27 +257,27 @@ def loop(mandel):
 				x,y = event.pos
 				print('Click detected at :{}'.format(event.pos))
 				mandel.set_center((x,y))
-		# Change complex number
-		if key[pygame.K_k]: mandel.c_move("DOWN")
-		if key[pygame.K_i]: mandel.c_move("UP")
-		if key[pygame.K_j]: mandel.c_move("LEFT")
-		if key[pygame.K_l]: mandel.c_move("RIGHT")
-		# Zoom
-		if key[pygame.K_q]: mandel.zoom("UP")
-		if key[pygame.K_e]: mandel.zoom("DOWN")
-		# Movement
-		if key[pygame.K_w]: mandel.shift("DOWN")
-		if key[pygame.K_s]: mandel.shift("UP")
-		if key[pygame.K_a]: mandel.shift("LEFT")
-		if key[pygame.K_d]: mandel.shift("RIGHT")
-		# Resolution
-		if key[pygame.K_x]: mandel.resol("UP")
-		if key[pygame.K_y]: mandel.resol("DOWN")
+			# Change complex number
+			if key[pygame.K_k]: mandel.c_move("DOWN")
+			if key[pygame.K_i]: mandel.c_move("UP")
+			if key[pygame.K_j]: mandel.c_move("LEFT")
+			if key[pygame.K_l]: mandel.c_move("RIGHT")
+			# Zoom
+			if key[pygame.K_q]: mandel.zoom("UP")
+			if key[pygame.K_e]: mandel.zoom("DOWN")
+			# Movement
+			if key[pygame.K_w]: mandel.shift("DOWN")
+			if key[pygame.K_s]: mandel.shift("UP")
+			if key[pygame.K_a]: mandel.shift("LEFT")
+			if key[pygame.K_d]: mandel.shift("RIGHT")
+			# Resolution
+			if key[pygame.K_x]: mandel.resol("UP")
+			if key[pygame.K_y]: mandel.resol("DOWN")
 		mandel.render()
 		#ygame.time.delay(10)
 
 def main():
-	witdth, height = (150,150)
+	witdth, height = (500,500)
 	mandel = Mandelbrot(witdth,height)
 	loop(mandel)
 
