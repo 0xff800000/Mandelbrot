@@ -8,6 +8,8 @@ class Mandelbrot:
 		self.cursor = False
 		self.color_mode = "MONOCHROME"
 		self.mode = "MANDELBROT"
+		self.exponant = 2
+		self.delta_exp = 0.1
 
 		# Create window
 		self.screen = pygame.display.set_mode((h,v))
@@ -81,7 +83,11 @@ class Mandelbrot:
 			z = tmp
 		for i in range(self.iterations):
 			if abs(z) >= 2: return i
-			z = z*z + c
+			try:
+				z = z**self.exponant + c
+			except:
+				z = c
+				pass
 		return self.iterations
 
 	def render(self):
@@ -225,6 +231,13 @@ class Mandelbrot:
 			if self.iterations < 10: self.iterations = 10
 		self.updateNeeded = True
 
+	def exp_change(self, direction):
+		if direction == "UP":
+			self.exponant += self.delta_exp
+		elif direction == "DOWN":
+			self.exponant -= self.delta_exp
+		self.updateNeeded = True
+
 	def toggle_cursor(self):
 		self.cursor = ~self.cursor
 		self.updateNeeded = True
@@ -248,6 +261,7 @@ class Mandelbrot:
 		print("Left:{}".format(self.left_center))
 		print("Zoom status:{}".format(self.zoom_stat))
 		print("Complex number:{}".format(self.start_number))
+		print("Exponant:{}".format(self.exponant))
 		print("Iterations:{}".format(self.iterations))
 		print("************")
 
@@ -283,7 +297,12 @@ def loop(mandel):
 		# Resolution
 		if key[pygame.K_x]: mandel.resol("UP")
 		if key[pygame.K_y]: mandel.resol("DOWN")
+		# Screenshot
 		if key[pygame.K_p]: mandel.writeImg()
+		# Exponant
+		if key[pygame.K_u]: mandel.exp_change("DOWN")
+		if key[pygame.K_o]: mandel.exp_change("UP")
+		if key[pygame.K_ESCAPE]: return
 		mandel.render()
 
 def main():
