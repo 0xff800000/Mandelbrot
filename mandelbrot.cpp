@@ -11,6 +11,7 @@
 #include <complex>
 #include <algorithm>
 #include <SDL2/SDL.h>
+#include <sys/time.h>
 
 using namespace std;
 
@@ -48,6 +49,7 @@ private:
 	bool cursor;
 	int color_mode;
 	int mode;
+	struct timespec frame_period;
 	int compute_number(complex<float>);
 	void min_max(int&,int&);
 	int map_color(int,int,int);
@@ -165,12 +167,16 @@ int Mandelbrot::compute_number(complex<float> c){
 
 void Mandelbrot::render(){
 	if(!updateNeeded) return;
+	struct timespec ts,te;
+	// clock_getres(CLOCK_REALTIME, &ts);
+	clock_gettime(CLOCK_REALTIME, &ts);
 	// Get upper left corner coordinate
 	float dx = abs(left_center.real() - center.real()) / h_res * 2;
 	float dy = dx;
 	complex<float> up_left (left_center.real(),left_center.imag()+(v_res/2)*dy);
 
 	// Compute the image
+	#pragma omp parallel for schedule(dynamic)
 	for(int y=0; y<v_res; y++){
 		for(int x=0; x<h_res; x++){
 			complex<float> pt;
@@ -208,6 +214,10 @@ void Mandelbrot::render(){
 	// Render frame
 	SDL_RenderPresent(renderer);
 	updateNeeded = false;
+	// clock_getres(CLOCK_REALTIME, &te);
+	clock_gettime(CLOCK_REALTIME, &te);
+	frame_period.tv_sec = te.tv_sec - ts.tv_sec;
+	frame_period.tv_nsec = te.tv_nsec - ts.tv_nsec;
 	debug();
 }
 
@@ -347,6 +357,7 @@ void Mandelbrot::debug(){
 	cout << "Zoom status:" << zoom_stat << endl;
 	cout << "Complex number:" << start_number << endl;
 	cout << "Iterations:" << iterations << endl;
+	cout << "Render time:" << (float)(frame_period.tv_sec * 1e9 + frame_period.tv_nsec) / 1e9 << endl;
 	cout << "*******" << endl;
 }
 
