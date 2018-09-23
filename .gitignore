@@ -24,6 +24,7 @@
 *.lib
 
 # Executables
+mandelbrot
 *.exe
 *.out
 *.app
