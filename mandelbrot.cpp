@@ -123,31 +123,33 @@ int Mandelbrot::map_color(int val, int min, int max){
 void Mandelbrot::sweep_color(int val, int&r,int&g, int&b){
 	r = 0;g = 0;b = 0;
 	if(val == iterations)return;
-	int iter_scale = iterations / 4;
+	float wavelength = val*(750-380)/iterations+380;
+	float attenuation;
 
-	// ff,0..ff,0
-	if(val <= iter_scale){
-		r = 0xff;
-		g = 0xff * val/iterations;
+	if(wavelength >= 380 && wavelength <=440){
+		attenuation = 0.3 + 0.7 * (wavelength - 380) / (440 - 380);
+		r = 0xff * ((-(wavelength-440)/(440-380)) * attenuation) ;
+		b = 0xff * attenuation;
 	}
-	// ff..0,ff,0
-	else if(val <= 2*iter_scale){
-		r = 0xff * (1 - val/iterations);
-		g = 0xff;
-	}
-	// 0,ff,0..ff
-	else if(val <= 3*iter_scale){
-		g = 0xff;
-		b = 0xff * val/iterations;
-	}
-	// 0,ff..0,ff
-	else if(val <= 4*iter_scale){
-		g = 0xff * (1 - val/iterations);
+	else if(wavelength >= 440 && wavelength <= 490){
+		g = 0xff * ((wavelength - 440)/(490 - 440));
 		b = 0xff;
 	}
-	// 0,0,ff..0
-	else{
-		b = 0xff * (1 - val/iterations);
+	else if(wavelength >= 490 && wavelength <= 510){
+		g = 0xff;
+		b = 0xff * (-(wavelength - 510) / (510 - 490));
+	}
+	else if(wavelength >= 510 && wavelength <= 580){
+		r = 0xff * ((wavelength - 510) / (580 - 510));
+		g = 0xff;
+	}
+	else if(wavelength >= 580 && wavelength <= 645){
+		r = 0xff;
+		g = 0xff * (-(wavelength - 645) / (645 - 580));
+	}
+	else if(wavelength >= 645 && wavelength <= 750){
+		attenuation = 0.3 + 0.7 * (750 - wavelength) / (750 - 645);
+		r = 0xff * attenuation;
 	}
 }
 
