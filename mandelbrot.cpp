@@ -52,7 +52,7 @@ private:
 	struct timespec frame_period;
 	int compute_number(complex<float>);
 	void min_max(int&,int&);
-	int map_color(int,int,int);
+	int map_color(int,int);
 	void sweep_color(int,int&,int&,int&b);
 
 };
@@ -113,11 +113,8 @@ void Mandelbrot::min_max(int&min,int&max){
 	max = maxs;
 }
 
-int Mandelbrot::map_color(int val, int min, int max){
+int Mandelbrot::map_color(int val, int max){
 	return (int)(val * 255) / (iterations); // Absolute
-	//return (max > 0)?((val-min)*255) / (max-min):0; // Relative
-
-	//return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 void Mandelbrot::sweep_color(int val, int&r,int&g, int&b){
@@ -192,7 +189,7 @@ void Mandelbrot::render(){
 	min_max(min,max);
 	for(int y=0; y<v_res; y++){
 		for(int x=0; x<h_res; x++){
-			int color = map_color(data[y][x], min, max);
+			int color = map_color(data[y][x], max);
 			if(color_mode == MONOCHROME){
 				SDL_SetRenderDrawColor(renderer,color,color,color,color);
 			}
@@ -299,12 +296,12 @@ void Mandelbrot::zoom(int direction){
 	complex<float> c;
 	switch(direction){
 		case UP:{
-			c = {-5*dx,0};
+			c = {-10*dx,0};
 			break;
 		}
 		case DOWN:{
 			if(zoom_max)return;
-			c = {5*dx,0};
+			c = {10*dx,0};
 			break;
 		}
 	}
@@ -418,6 +415,10 @@ void loop(Mandelbrot&mandel){
 
 int main(int argc, char** argv) {
     int Width=400,Height=400;
+	if(argc == 3){
+		Width = atoi(argv[2]);
+		Height = atoi(argv[1]);
+	}
     Mandelbrot mandel(Width,Height);
     loop(mandel);
 
