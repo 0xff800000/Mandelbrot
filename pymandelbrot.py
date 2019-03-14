@@ -47,31 +47,33 @@ class Mandelbrot:
 	def sweep_color(self, val):
 		r,g,b = (0,0,0)
 		if val == self.iterations: return (r,g,b)
-		iter_scale = int(self.iterations / 4)
+		wavelength = val*(750-380)/self.iterations+380
+		attenuation = 0
 
-		# ff,0..ff,0
-		if val <= iter_scale:
-			r = 0xff
-			g = 0xff * val/self.iterations
+		if wavelength >= 380 and wavelength <=440:
+			attenuation = 0.3 + 0.7 * (wavelength - 380) / (440 - 380)
+			r = 0xff * ((-(wavelength-440)/(440-380)) * attenuation)
+			b = 0xff * attenuation
 
-		# ff..0,ff,0
-		elif val <= 2*iter_scale:
-			r = 0xff * (1 - val/self.iterations)
-			g = 0xff
-
-		# 0,ff,0..ff
-		elif val <= 3*iter_scale:
-			g = 0xff
-			b = 0xff * val/self.iterations
-
-		# 0,ff..0,ff
-		elif val <= 4*iter_scale:
-			g = 0xff * (1 - val/self.iterations)
+		elif wavelength >= 440 and wavelength <= 490:
+			g = 0xff * ((wavelength - 440)/(490 - 440))
 			b = 0xff
 
-		# 0,0,ff..0
-		else:
-			b = 0xff * (1 - val/self.iterations)
+		elif wavelength >= 490 and wavelength <= 510:
+			g = 0xff
+			b = 0xff * (-(wavelength - 510) / (510 - 490))
+
+		elif wavelength >= 510 and wavelength <= 580:
+			r = 0xff * ((wavelength - 510) / (580 - 510))
+			g = 0xff
+
+		elif wavelength >= 580 and wavelength <= 645:
+			r = 0xff
+			g = 0xff * (-(wavelength - 645) / (645 - 580))
+
+		elif wavelength >= 645 and wavelength <= 750:
+			attenuation = 0.3 + 0.7 * (750 - wavelength) / (750 - 645)
+			r = 0xff * attenuation
 
 		return (r,g,b)
 
