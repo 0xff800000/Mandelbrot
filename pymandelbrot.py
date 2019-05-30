@@ -47,7 +47,7 @@ class Mandelbrot:
 	def sweep_color(self, val):
 		r,g,b = (0,0,0)
 		if val == self.iterations: return (r,g,b)
-		wavelength = val*(750-380)/self.iterations+380
+		wavelength = (self.iterations-val)*(750-380)/self.iterations+380
 		attenuation = 0
 
 		if wavelength >= 380 and wavelength <=440:
